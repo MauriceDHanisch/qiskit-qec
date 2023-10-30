@@ -315,7 +315,22 @@ class UnionFindDecoder(ClusteringDecoder):
         self.use_peeling = use_peeling
         self._clusters4peeling = []
 
-    def process(self, string: str):
+
+    #TODO this is blatantely bad, need to fix it but first talk with James
+    def reorder_string(self, input_string):
+        # Step 1: Split the string by spaces
+        split_string = input_string.split()
+
+        # Step 2: Reverse the order of the characters in the first part
+        split_string[0] = split_string[0][::-1]
+
+        # Step 3: Join the modified first part with the rest of the split string
+        output_string = ' '.join(split_string)
+
+        return output_string
+    
+
+    def process(self, string: str, _return_err_str = False):
         """
         Process an output string and return corrected final outcomes.
 
@@ -336,12 +351,13 @@ class UnionFindDecoder(ClusteringDecoder):
             self.cluster(highlighted_nodes)
             clusters = self._clusters4peeling
 
+            all_flipped_qubits = {}
             # determine the net logical z
-            net_z_logicals = {tuple(z_logical): 0 for z_logical in self.measured_logicals}
-            for cluster_nodes, _ in clusters:
+            net_z_logicals = {tuple(z_logical): 0 for z_logical in self.measured_logicals} # i.e {(0,): 0}
+            for i, (cluster_nodes, _ ) in enumerate(clusters):
                 erasure = self.graph.subgraph(cluster_nodes)
                 flipped_qubits = self.peeling(erasure)
-                #print("flipped qubits", flipped_qubits )
+                all_flipped_qubits[f"Cluster_{i}"] = flipped_qubits
                 for qubit_to_be_corrected in flipped_qubits:
                     for z_logical in net_z_logicals:
                         if qubit_to_be_corrected in z_logical:
@@ -351,11 +367,18 @@ class UnionFindDecoder(ClusteringDecoder):
 
             # apply this to the raw readout
             corrected_z_logicals = []
-            raw_logicals = self.code.string2raw_logicals(string)
+            raw_logicals = self.code.string2raw_logicals(self.reorder_string(string))
             for j, z_logical in enumerate(self.measured_logicals):
+                # for how many physical reprs the measured_logicals have (i.e. 1 for rep Code: (0,)) 
+                # the raw logical is the raw_logicals[j] so the raw logical outcome of the jth logical.
+                # To this we append the net_z_logical.
                 raw_logical = int(raw_logicals[j])
                 corrected_logical = (raw_logical + net_z_logicals[tuple(z_logical)]) % 2
                 corrected_z_logicals.append(corrected_logical)
+
+            if _return_err_str:
+                return corrected_z_logicals, all_flipped_qubits
+            
             return corrected_z_logicals
         else:
             # turn string into nodes and cluster
