@@ -500,7 +500,7 @@ class UnionFindDecoder(ClusteringDecoder):
         for root in self.odd_cluster_roots:
             odd_cluster = self.clusters[root]
             for boundary_edge in odd_cluster.boundary:
-                boundary_edge.data.properties["growth"] += 0.5
+                boundary_edge.data.properties["growth"] += 0.01
                 if (
                     boundary_edge.data.properties["growth"] >= boundary_edge.data.weight
                     and not boundary_edge.data.properties["fully_grown"]
