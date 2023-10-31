@@ -907,18 +907,20 @@ class UnionFindDecoder_v2(ClusteringDecoder):
         for root in sorted_odd_cluster_roots:
             odd_cluster = self.clusters[root]
             #print("Calculating gamma...")
+            min_weight = min(boundary_edge.data.weight for boundary_edge in odd_cluster.boundary)
             gamma = min(
             (boundary_edge.data.weight - boundary_edge.data.properties["growth"])
             for boundary_edge in odd_cluster.boundary
             )   
-            print(f"gamma: {gamma}")
+            #print(f"gamma: {gamma}")
             for boundary_edge in odd_cluster.boundary:
-                boundary_edge.data.properties["growth"] += gamma/2
-                print(f"edge growth: {boundary_edge.data.properties['growth']}")
-                if (
-                    boundary_edge.data.properties["growth"] >= boundary_edge.data.weight
-                    and not boundary_edge.data.properties["fully_grown"]
-                ):
+                boundary_edge.data.weight += -min_weight
+                #print(f"edge growth: {boundary_edge.data.properties['growth']}")
+                if (boundary_edge.data.weight <= 0 and not boundary_edge.data.properties["fully_grown"]):
+                #if (boundary_edge.data.properties["growth"] >= boundary_edge.data.weight
+                    #and not boundary_edge.data.properties["fully_grown"]
+                #):
+                    #print("Edge fully grown")
                     neighbour_root = self.find(boundary_edge.neighbour_vertex)
                     if not neighbour_root in self.clusters:
                         boundary_edges = []
