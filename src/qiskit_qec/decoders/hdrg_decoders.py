@@ -88,7 +88,8 @@ class ClusteringDecoder(ABC):
             cluster_logicals[c] = z_logicals
 
         # get the net effect on each logical
-        net_z_logicals = {z_logical[0]: 0 for z_logical in self.measured_logicals}
+        net_z_logicals = {
+            z_logical[0]: 0 for z_logical in self.measured_logicals}
         for c, z_logicals in cluster_logicals.items():
             for z_logical in self.measured_logicals:
                 if z_logical[0] in z_logicals:
@@ -100,7 +101,8 @@ class ClusteringDecoder(ABC):
         string = string.split(" ")[0]
         for z_logical in self.measured_logicals:
             raw_logical = int(string[-1 - self.code_index[z_logical[0]]])
-            corrected_logical = (raw_logical + net_z_logicals[z_logical[0]]) % 2
+            corrected_logical = (
+                raw_logical + net_z_logicals[z_logical[0]]) % 2
             corrected_z_logicals.append(corrected_logical)
 
         return corrected_z_logicals
@@ -171,7 +173,8 @@ class BravyiHaahDecoder(ClusteringDecoder):
     def _get_boundary_nodes(self):
         boundary_nodes = []
         for element, z_logical in enumerate(self.measured_logicals):
-            node = DecodingGraphNode(is_boundary=True, qubits=z_logical, index=element)
+            node = DecodingGraphNode(
+                is_boundary=True, qubits=z_logical, index=element)
             if isinstance(self.code, ArcCircuit):
                 node.properties["link qubit"] = None
             boundary_nodes.append(node)
@@ -191,7 +194,8 @@ class BravyiHaahDecoder(ClusteringDecoder):
         # get indices for nodes and boundary nodes
         dg = self.decoding_graph.graph
         ns = set(dg.nodes().index(node) for node in nodes)
-        bns = set(dg.nodes().index(node) for node in self._get_boundary_nodes())
+        bns = set(dg.nodes().index(node)
+                  for node in self._get_boundary_nodes())
 
         dist_max = 0
         final_clusters = {}
@@ -315,8 +319,8 @@ class UnionFindDecoder(ClusteringDecoder):
         self.use_peeling = use_peeling
         self._clusters4peeling = []
 
+    # TODO this is blatantely bad, need to fix it but first talk with James
 
-    #TODO this is blatantely bad, need to fix it but first talk with James
     def reorder_string(self, input_string):
         # Step 1: Split the string by spaces
         split_string = input_string.split()
@@ -328,9 +332,8 @@ class UnionFindDecoder(ClusteringDecoder):
         output_string = ' '.join(split_string)
 
         return output_string
-    
 
-    def process(self, string: str, _return_err_str = False):
+    def process(self, string: str, _return_err_str=False):
         """
         Process an output string and return corrected final outcomes.
 
@@ -345,7 +348,8 @@ class UnionFindDecoder(ClusteringDecoder):
 
         if self.use_peeling:
             self.graph = deepcopy(self.decoding_graph.graph)
-            highlighted_nodes = self.code.string2nodes(string, all_logicals=True)
+            highlighted_nodes = self.code.string2nodes(
+                string, all_logicals=True)
 
             # call cluster to do the clustering, but actually use the peeling form
             self.cluster(highlighted_nodes)
@@ -353,8 +357,10 @@ class UnionFindDecoder(ClusteringDecoder):
 
             all_flipped_qubits = {}
             # determine the net logical z
-            net_z_logicals = {tuple(z_logical): 0 for z_logical in self.measured_logicals} # i.e {(0,): 0}
-            for i, (cluster_nodes, _ ) in enumerate(clusters):
+            # i.e {(0,): 0}
+            net_z_logicals = {
+                tuple(z_logical): 0 for z_logical in self.measured_logicals}
+            for i, (cluster_nodes, _) in enumerate(clusters):
                 erasure = self.graph.subgraph(cluster_nodes)
                 flipped_qubits = self.peeling(erasure)
                 all_flipped_qubits[f"Cluster_{i}"] = flipped_qubits
@@ -362,23 +368,25 @@ class UnionFindDecoder(ClusteringDecoder):
                     for z_logical in net_z_logicals:
                         if qubit_to_be_corrected in z_logical:
                             net_z_logicals[z_logical] += 1
-            #for z_logical, num in net_z_logicals.items():
-                #net_z_logicals[z_logical] = num % 2
+            # for z_logical, num in net_z_logicals.items():
+                # net_z_logicals[z_logical] = num % 2
 
             # apply this to the raw readout
             corrected_z_logicals = []
-            raw_logicals = self.code.string2raw_logicals(self.reorder_string(string))
+            raw_logicals = self.code.string2raw_logicals(
+                self.reorder_string(string))
             for j, z_logical in enumerate(self.measured_logicals):
-                # for how many physical reprs the measured_logicals have (i.e. 1 for rep Code: (0,)) 
+                # for how many physical reprs the measured_logicals have (i.e. 1 for rep Code: (0,))
                 # the raw logical is the raw_logicals[j] so the raw logical outcome of the jth logical.
                 # To this we append the net_z_logical.
                 raw_logical = int(raw_logicals[j])
-                corrected_logical = (raw_logical + net_z_logicals[tuple(z_logical)]) % 2
+                corrected_logical = (
+                    raw_logical + net_z_logicals[tuple(z_logical)]) % 2
                 corrected_z_logicals.append(corrected_logical)
 
             if _return_err_str:
                 return corrected_z_logicals, all_flipped_qubits
-            
+
             return corrected_z_logicals
         else:
             # turn string into nodes and cluster
@@ -399,7 +407,8 @@ class UnionFindDecoder(ClusteringDecoder):
             the given node as keys and an integer specifying their cluster as the corresponding
             value.
         """
-        atypical_node_indices = [self.graph.nodes().index(node) for node in atypical_nodes]
+        atypical_node_indices = [self.graph.nodes().index(node)
+                                 for node in atypical_nodes]
         for node_index, _ in enumerate(self.graph.nodes()):
             self.graph[node_index].properties["syndrome"] = node_index in atypical_node_indices
             self.graph[node_index].properties["root"] = node_index
@@ -420,7 +429,8 @@ class UnionFindDecoder(ClusteringDecoder):
         clusters = {}
         for c, cluster in self.clusters.items():
             # determine which nodes exactly are in the neutral cluster
-            neutral_nodes = list(cluster.atypical_nodes | cluster.boundary_nodes)
+            neutral_nodes = list(cluster.atypical_nodes |
+                                 cluster.boundary_nodes)
             # put them in the required dict
             for n in neutral_nodes:
                 clusters[n] = c
@@ -431,7 +441,8 @@ class UnionFindDecoder(ClusteringDecoder):
             if not cluster.atypical_nodes:
                 continue
             self._clusters4peeling.append(
-                (list(cluster.nodes), list(cluster.atypical_nodes | cluster.boundary_nodes))
+                (list(cluster.nodes), list(
+                    cluster.atypical_nodes | cluster.boundary_nodes))
             )
 
         return clusters
@@ -450,7 +461,8 @@ class UnionFindDecoder(ClusteringDecoder):
         if self.graph[u].properties["root"] == u:
             return self.graph[u].properties["root"]
 
-        self.graph[u].properties["root"] = self.find(self.graph[u].properties["root"])
+        self.graph[u].properties["root"] = self.find(
+            self.graph[u].properties["root"])
         return self.graph[u].properties["root"]
 
     def _create_new_cluster(self, atypical_node_index):
@@ -459,12 +471,15 @@ class UnionFindDecoder(ClusteringDecoder):
             self.odd_cluster_roots.insert(0, atypical_node_index)
         boundary_edges = []
         for edge2neighbor_index, neighbor_node, edge2neighbro_data in self.neighbouring_edges(atypical_node_index):
-            boundary_edges.append(BoundaryEdge(edge2neighbor_index, atypical_node_index, neighbor_node, edge2neighbro_data))
+            boundary_edges.append(BoundaryEdge(
+                edge2neighbor_index, atypical_node_index, neighbor_node, edge2neighbro_data))
         self.clusters[atypical_node_index] = UnionFindDecoderCluster(
             boundary=boundary_edges,
             fully_grown_edges=set(),
-            atypical_nodes=set([atypical_node_index]) if not node.is_boundary else set([]),
-            boundary_nodes=set([atypical_node_index]) if node.is_boundary else set([]),
+            atypical_nodes=set([atypical_node_index]
+                               ) if not node.is_boundary else set([]),
+            boundary_nodes=set([atypical_node_index]
+                               ) if node.is_boundary else set([]),
             nodes=set([atypical_node_index]),
             size=1,
         )
@@ -506,7 +521,8 @@ class UnionFindDecoder(ClusteringDecoder):
                             boundary=boundary_edges,
                             fully_grown_edges=set(),
                             atypical_nodes=set(),
-                            boundary_nodes=set([boundary_edge.neighbour_vertex])
+                            boundary_nodes=set(
+                                [boundary_edge.neighbour_vertex])
                             if self.graph[boundary_edge.neighbour_vertex].is_boundary
                             else set([]),
                             nodes=set([boundary_edge.neighbour_vertex]),
@@ -531,7 +547,8 @@ class UnionFindDecoder(ClusteringDecoder):
         """
         new_neutral_clusters = []
         for fusion_entry in fusion_edge_list:
-            root_u, root_v = self.find(fusion_entry.u), self.find(fusion_entry.v)
+            root_u, root_v = self.find(
+                fusion_entry.u), self.find(fusion_entry.v)
             if root_u == root_v:
                 continue
             bigger_root = root_v if self.clusters[root_v].size > self.clusters[root_u].size else root_u
@@ -545,12 +562,14 @@ class UnionFindDecoder(ClusteringDecoder):
 
             fusion_entry.connecting_edge.data.properties["growth"] = 0
             fusion_entry.connecting_edge.data.properties["fully_grown"] = True
-            bigger_cluster.fully_grown_edges.add(fusion_entry.connecting_edge.index)
+            bigger_cluster.fully_grown_edges.add(
+                fusion_entry.connecting_edge.index)
 
             # Merge boundaries
             bigger_cluster.boundary += smaller_cluster.boundary
             bigger_cluster.boundary.remove(fusion_entry.connecting_edge)
-            bigger_cluster.boundary.remove(fusion_entry.connecting_edge.reverse())
+            bigger_cluster.boundary.remove(
+                fusion_entry.connecting_edge.reverse())
 
             bigger_cluster.nodes |= smaller_cluster.nodes
             bigger_cluster.atypical_nodes |= smaller_cluster.atypical_nodes
@@ -630,7 +649,8 @@ class UnionFindDecoder(ClusteringDecoder):
         edges = set()
         for edge in tree.edges[::-1]:
             endpoints = erasure.get_edge_endpoints_by_index(edge)
-            pendant_vertex = endpoints[0] if not tree.vertices[endpoints[0]] else endpoints[1]
+            pendant_vertex = endpoints[0] if not tree.vertices[endpoints[0]
+                                                               ] else endpoints[1]
             tree_vertex = endpoints[0] if pendant_vertex == endpoints[1] else endpoints[1]
             tree.vertices[tree_vertex].remove(edge)
             if erasure[pendant_vertex].properties["syndrome"]:
@@ -662,6 +682,446 @@ class UnionFindDecoder(ClusteringDecoder):
                 self.graph.incident_edge_index_map(node_index)
             ).items()
         ]
+    
+
+
+
+
+
+
+
+
+
+############################################################################################################
+############################################################################################################
+############################################################################################################
+############################################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class UnionFindDecoder_v2(ClusteringDecoder):
+    """v2"""
+
+    def __init__(self, code, decoding_graph: DecodingGraph = None, use_peeling=True) -> None:
+        super().__init__(code, decoding_graph=decoding_graph)
+        self.graph = deepcopy(self.decoding_graph.graph)
+        self.clusters: Dict[int, UnionFindDecoderCluster] = {}
+        self.odd_cluster_roots: List[int] = []
+        self.use_peeling = use_peeling
+        self._clusters4peeling = []
+
+    # TODO this is blatantely bad, need to fix it but first talk with James
+
+    def reorder_string(self, input_string):
+        # Step 1: Split the string by spaces
+        split_string = input_string.split()
+
+        # Step 2: Reverse the order of the characters in the first part
+        split_string[0] = split_string[0][::-1]
+
+        # Step 3: Join the modified first part with the rest of the split string
+        output_string = ' '.join(split_string)
+
+        return output_string
+
+    def process(self, string: str, _return_err_str=False):
+        """
+        Process an output string and return corrected final outcomes.
+
+        Args:
+            string (str): Output string of the code.
+        Returns:
+            corrected_z_logicals (list): A list of integers that are 0 or 1.
+        These are the corrected values of the final transversal
+        measurement, corresponding to the logical operators of
+        self.z_logicals.
+        """
+
+        if self.use_peeling:
+            self.graph = deepcopy(self.decoding_graph.graph)
+            highlighted_nodes = self.code.string2nodes(
+                string, all_logicals=True)
+
+            # call cluster to do the clustering, but actually use the peeling form
+            self.cluster(highlighted_nodes)
+            clusters = self._clusters4peeling
+
+            all_flipped_qubits = {}
+            # determine the net logical z
+            # i.e {(0,): 0}
+            net_z_logicals = {
+                tuple(z_logical): 0 for z_logical in self.measured_logicals}
+            for i, (cluster_nodes, _) in enumerate(clusters):
+                erasure = self.graph.subgraph(cluster_nodes)
+                flipped_qubits = self.peeling(erasure)
+                all_flipped_qubits[f"Cluster_{i}"] = flipped_qubits
+                for qubit_to_be_corrected in flipped_qubits:
+                    for z_logical in net_z_logicals:
+                        if qubit_to_be_corrected in z_logical:
+                            net_z_logicals[z_logical] += 1
+            # for z_logical, num in net_z_logicals.items():
+                # net_z_logicals[z_logical] = num % 2
+
+            # apply this to the raw readout
+            corrected_z_logicals = []
+            raw_logicals = self.code.string2raw_logicals(
+                self.reorder_string(string))
+            for j, z_logical in enumerate(self.measured_logicals):
+                # for how many physical reprs the measured_logicals have (i.e. 1 for rep Code: (0,))
+                # the raw logical is the raw_logicals[j] so the raw logical outcome of the jth logical.
+                # To this we append the net_z_logical.
+                raw_logical = int(raw_logicals[j])
+                corrected_logical = (
+                    raw_logical + net_z_logicals[tuple(z_logical)]) % 2
+                corrected_z_logicals.append(corrected_logical)
+
+            if _return_err_str:
+                return corrected_z_logicals, all_flipped_qubits
+
+            return corrected_z_logicals
+        else:
+            # turn string into nodes and cluster
+            nodes = self.code.string2nodes(string, all_logicals=True)
+            clusters = self.cluster(nodes)
+            return self.get_corrections(string, clusters)
+
+    def cluster(self, atypical_nodes: List):
+        """
+        Create clusters using the union-find algorithm.
+
+        Args:
+            nodes (List): List of non-typical nodes in the syndrome graph,
+            of the type produced by `string2nodes`.
+
+        Returns:
+            clusters (dict): Dictionary with the indices of
+            the given node as keys and an integer specifying their cluster as the corresponding
+            value.
+        """
+        atypical_node_indices = [self.graph.nodes().index(node)
+                                 for node in atypical_nodes]
+        for node_index, _ in enumerate(self.graph.nodes()):
+            self.graph[node_index].properties["syndrome"] = node_index in atypical_node_indices
+            self.graph[node_index].properties["root"] = node_index
+
+        for edge in self.graph.edges():
+            edge.properties["growth"] = 0
+            edge.properties["fully_grown"] = False
+
+        self.clusters: Dict[int, UnionFindDecoderCluster] = {}
+        self.odd_cluster_roots = []
+        for node_index in atypical_node_indices:
+            self._create_new_cluster(node_index)
+
+        while self.odd_cluster_roots:
+            self._grow_and_merge_clusters()
+
+        # compile info into standard clusters dict
+        clusters = {}
+        for c, cluster in self.clusters.items():
+            # determine which nodes exactly are in the neutral cluster
+            neutral_nodes = list(cluster.atypical_nodes |
+                                 cluster.boundary_nodes)
+            # put them in the required dict
+            for n in neutral_nodes:
+                clusters[n] = c
+
+        # also compile into form required for peeling
+        self._clusters4peeling = []
+        for _, cluster in self.clusters.items():
+            if not cluster.atypical_nodes:
+                continue
+            self._clusters4peeling.append(
+                (list(cluster.nodes), list(
+                    cluster.atypical_nodes | cluster.boundary_nodes))
+            )
+
+        return clusters
+
+    def find(self, u: int) -> int:
+        """
+        Find() function as described in the paper that returns the root
+        of the cluster of a node, including path compression.
+
+        Args:
+            u (int): The index of the node in the decoding graph.
+
+        Returns:
+            root (int): The root of the cluster of node u.
+        """
+        if self.graph[u].properties["root"] == u:
+            return self.graph[u].properties["root"]
+
+        self.graph[u].properties["root"] = self.find(
+            self.graph[u].properties["root"])
+        return self.graph[u].properties["root"]
+
+    def _create_new_cluster(self, atypical_node_index):
+        node = self.graph[atypical_node_index]
+        if not node.is_boundary:
+            self.odd_cluster_roots.insert(0, atypical_node_index)
+        boundary_edges = []
+        for edge2neighbor_index, neighbor_node, edge2neighbro_data in self.neighbouring_edges(atypical_node_index):
+            boundary_edges.append(BoundaryEdge(
+                edge2neighbor_index, atypical_node_index, neighbor_node, edge2neighbro_data))
+        self.clusters[atypical_node_index] = UnionFindDecoderCluster(
+            boundary=boundary_edges,
+            fully_grown_edges=set(),
+            atypical_nodes=set([atypical_node_index]
+                               ) if not node.is_boundary else set([]),
+            boundary_nodes=set([atypical_node_index]
+                               ) if node.is_boundary else set([]),
+            nodes=set([atypical_node_index]),
+            size=1,
+        )
+
+    def _grow_and_merge_clusters(self) -> Set[int]:
+        fusion_edge_list = self._grow_clusters()
+        return self._merge_clusters(fusion_edge_list)
+
+    def _grow_clusters(self) -> List[FusionEntry]:
+        """
+        Grow every "odd" cluster by half an edge.
+
+        Returns:
+            fusion_edge_list (List[FusionEntry]): List of edges that connect two
+            clusters that will be merged in the next step.
+        """
+        fusion_edge_list: List[FusionEntry] = []
+        #print(f"Ordering {len(self.odd_cluster_roots)}clusters...")
+        sorted_odd_cluster_roots = sorted(
+        self.odd_cluster_roots,
+        key=lambda root: len(self.clusters[root].boundary)
+        )
+        for root in sorted_odd_cluster_roots:
+            odd_cluster = self.clusters[root]
+            #print("Calculating gamma...")
+            gamma = min(
+            (boundary_edge.data.weight - boundary_edge.data.properties["growth"])
+            for boundary_edge in odd_cluster.boundary
+            )   
+            print(f"gamma: {gamma}")
+            for boundary_edge in odd_cluster.boundary:
+                boundary_edge.data.properties["growth"] += gamma/2
+                print(f"edge growth: {boundary_edge.data.properties['growth']}")
+                if (
+                    boundary_edge.data.properties["growth"] >= boundary_edge.data.weight
+                    and not boundary_edge.data.properties["fully_grown"]
+                ):
+                    neighbour_root = self.find(boundary_edge.neighbour_vertex)
+                    if not neighbour_root in self.clusters:
+                        boundary_edges = []
+                        for nn_edge_index, neigbors_neigbor_node, nn_edge_data in self.neighbouring_edges(
+                            boundary_edge.neighbour_vertex
+                        ):
+                            boundary_edges.append(
+                                BoundaryEdge(
+                                    nn_edge_index, boundary_edge.neighbour_vertex, neigbors_neigbor_node, nn_edge_data
+                                )
+                            )
+                        self.graph[boundary_edge.neighbour_vertex].properties["root"] = boundary_edge.neighbour_vertex
+                        self.clusters[boundary_edge.neighbour_vertex] = UnionFindDecoderCluster(
+                            boundary=boundary_edges,
+                            fully_grown_edges=set(),
+                            atypical_nodes=set(),
+                            boundary_nodes=set(
+                                [boundary_edge.neighbour_vertex])
+                            if self.graph[boundary_edge.neighbour_vertex].is_boundary
+                            else set([]),
+                            nodes=set([boundary_edge.neighbour_vertex]),
+                            size=1,
+                        )
+                    fusion_entry = FusionEntry(
+                        u=boundary_edge.cluster_vertex, v=boundary_edge.neighbour_vertex, connecting_edge=boundary_edge
+                    )
+                    fusion_edge_list.append(fusion_entry)
+        return fusion_edge_list
+
+    def _merge_clusters(self, fusion_edge_list: List[FusionEntry]):
+        """
+        Merges the clusters based on the fusion_edge_list computed in _grow_clusters().
+        Updates the odd_clusters list by recomputing the neutrality of the newly merged clusters.
+
+        Args:
+            fusion_edge_list (List[FusionEntry]): List of edges that connect two
+            clusters that was computed in _grow_clusters().
+        Returns:
+            new_neutral_cluster_roots (List[int]): List of roots of newly neutral clusters
+        """
+        new_neutral_clusters = []
+        for fusion_entry in fusion_edge_list:
+            root_u, root_v = self.find(
+                fusion_entry.u), self.find(fusion_entry.v)
+            if root_u == root_v:
+                continue
+            bigger_root = root_v if self.clusters[root_v].size > self.clusters[root_u].size else root_u
+            smaller_root = root_v if bigger_root == root_u else root_u
+
+            if bigger_root in new_neutral_clusters or smaller_root in new_neutral_clusters:
+                continue
+
+            bigger_cluster = self.clusters[bigger_root]
+            smaller_cluster = self.clusters.pop(smaller_root)
+
+            fusion_entry.connecting_edge.data.properties["growth"] = 0
+            fusion_entry.connecting_edge.data.properties["fully_grown"] = True
+            bigger_cluster.fully_grown_edges.add(
+                fusion_entry.connecting_edge.index)
+
+            # Merge boundaries
+            bigger_cluster.boundary += smaller_cluster.boundary
+            bigger_cluster.boundary.remove(fusion_entry.connecting_edge)
+            bigger_cluster.boundary.remove(
+                fusion_entry.connecting_edge.reverse())
+
+            bigger_cluster.nodes |= smaller_cluster.nodes
+            bigger_cluster.atypical_nodes |= smaller_cluster.atypical_nodes
+            bigger_cluster.boundary_nodes |= smaller_cluster.boundary_nodes
+            bigger_cluster.fully_grown_edges |= smaller_cluster.fully_grown_edges
+            bigger_cluster.size += smaller_cluster.size
+
+            # update odd_cluster_roots
+            if self.code.is_cluster_neutral(
+                [self.graph[node] for node in bigger_cluster.atypical_nodes]
+            ) or self.code.is_cluster_neutral(
+                [
+                    self.graph[node]
+                    for node in bigger_cluster.atypical_nodes
+                    | (set(list(bigger_cluster.boundary_nodes)[:1]) if bigger_cluster.boundary_nodes else set())
+                ]
+            ):
+                if bigger_root in self.odd_cluster_roots:
+                    self.odd_cluster_roots.remove(bigger_root)
+                    new_neutral_clusters.append(bigger_root)
+            else:
+                if not bigger_root in self.odd_cluster_roots:
+                    self.odd_cluster_roots.append(bigger_root)
+
+            if smaller_root in self.odd_cluster_roots:
+                self.odd_cluster_roots.remove(smaller_root)
+            self.graph[smaller_root].properties["root"] = bigger_root
+            self.odd_cluster_roots = sorted(
+                self.odd_cluster_roots, key=lambda c: self.clusters[c].size
+            )
+
+    def peeling(self, erasure: PyGraph) -> List[int]:
+        """ "
+        Runs the peeling decoder on the erasure provided.
+        Assumes that the erasure is one connected component, if not it will run in an
+        infinite loop in the tree construction.
+        It works by first producing a spanning forest of the erasure and then
+        going backwards through the edges of the tree computing the error based on the syndrome.
+        Based on arXiv:1703.01517.
+
+        TODO: Extract to a separate decoder.
+
+        Args:
+            erasure (PyGraph): subgraph of the syndrome graph that represents the erasure.
+
+        Returns:
+            errors (List[int]): List of qubit indices on which Pauli errors occurred.
+        """
+        tree = SpanningForest(vertices={}, edges=[])
+
+        # Construct spanning forest
+        # Pick starting vertex
+        for vertex in erasure.node_indices():
+            if erasure[vertex].is_boundary and erasure[vertex].properties["syndrome"]:
+                tree.vertices[vertex] = []
+                break
+
+        if not tree.vertices:
+            for vertex in erasure.node_indices():
+                if erasure[vertex].properties["syndrome"]:
+                    tree.vertices[vertex] = []
+                    break
+
+        # Expand forest |V| - 1 times, constructing it
+        while len(tree.edges) < len(erasure.nodes()) - 1:
+            vertices = copy(tree.vertices)
+            for node in vertices.keys():
+                if len(tree.edges) >= len(erasure.nodes()) - 1:
+                    break
+                for edge, (_, neighbour, _) in dict(erasure.incident_edge_index_map(node)).items():
+                    if not neighbour in tree.vertices.keys():
+                        tree.edges.append(edge)
+                        tree.vertices[neighbour] = []
+                        tree.vertices[node].append(edge)
+                        break
+
+        edges = set()
+        for edge in tree.edges[::-1]:
+            endpoints = erasure.get_edge_endpoints_by_index(edge)
+            pendant_vertex = endpoints[0] if not tree.vertices[endpoints[0]
+                                                               ] else endpoints[1]
+            tree_vertex = endpoints[0] if pendant_vertex == endpoints[1] else endpoints[1]
+            tree.vertices[tree_vertex].remove(edge)
+            if erasure[pendant_vertex].properties["syndrome"]:
+                edges.add(edge)
+                erasure[tree_vertex].properties["syndrome"] = not erasure[tree_vertex].properties[
+                    "syndrome"
+                ]
+                erasure[pendant_vertex].properties["syndrome"] = False
+
+        return [erasure.edges()[edge].qubits[0] for edge in edges if erasure.edges()[edge].qubits]
+
+    def neighbouring_edges(self, node_index) -> List[Tuple[int, int, DecodingGraphEdge]]:
+        """
+        Returns all of the neighbouring edges of a node in the decoding graph.
+        Args:
+            node_index (int): The index of the node in the graph.
+
+        Returns:
+            neighbouring_edges (List[Tuple[int, int, DecodingGraphEdge]]): List of neighbouring edges
+            in following format: (
+                index of edge in graph,
+                index of neighbour node in graph,
+                data payload of the edge
+            )
+        """
+        return [
+            (edge, neighbour, data)
+            for edge, (_, neighbour, data) in dict(
+                self.graph.incident_edge_index_map(node_index)
+            ).items()
+        ]
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+############################################################################################################
+############################################################################################################
+############################################################################################################
+
+
+
+
+
+
+
+
 
 
 class ClAYGDecoder(UnionFindDecoder):
@@ -709,7 +1169,8 @@ class ClAYGDecoder(UnionFindDecoder):
             edge.properties["fully_grown"] = False
 
         string = "".join([str(c) for c in string[::-1]])
-        output = [int(bit) for bit in list(string.split(" ", maxsplit=self.code.d)[0])][::-1]
+        output = [int(bit) for bit in list(
+            string.split(" ", maxsplit=self.code.d)[0])][::-1]
         highlighted_nodes = self.code.string2nodes(string, all_logicals=True)
         if not highlighted_nodes:
             return output  # There's nothing for us to do here
@@ -720,7 +1181,8 @@ class ClAYGDecoder(UnionFindDecoder):
         flattened_highlighted_nodes: List[DecodingGraphNode] = []
         for highlighted_node in highlighted_nodes:
             highlighted_node.time = 0
-            flattened_highlighted_nodes.append(self.graph.nodes().index(highlighted_node))
+            flattened_highlighted_nodes.append(
+                self.graph.nodes().index(highlighted_node))
 
         for cluster_nodes, cluster_atypical_nodes in clusters:
             if not cluster_nodes:
@@ -749,7 +1211,8 @@ class ClAYGDecoder(UnionFindDecoder):
         self.clusters: Dict[int, UnionFindDecoderCluster] = {}
         self.odd_cluster_roots = []
 
-        times: List[List[DecodingGraphNode]] = [[] for _ in range(self.code.T + 1)]
+        times: List[List[DecodingGraphNode]] = [[]
+                                                for _ in range(self.code.T + 1)]
         boundaries = []
         for node in deepcopy(nodes):
             if node.is_boundary:
@@ -781,7 +1244,8 @@ class ClAYGDecoder(UnionFindDecoder):
         clusters = {}
         for c, cluster in enumerate(neutral_clusters):
             # determine which nodes exactly are in the neutral cluster
-            neutral_nodes = list(cluster.atypical_nodes | cluster.boundary_nodes)
+            neutral_nodes = list(cluster.atypical_nodes |
+                                 cluster.boundary_nodes)
             # put them in the required dict
             for n in neutral_nodes:
                 clusters[n] = c
@@ -789,7 +1253,8 @@ class ClAYGDecoder(UnionFindDecoder):
         neutral_cluster_nodes: List[List[int]] = []
         for cluster in neutral_clusters:
             neutral_cluster_nodes.append(
-                (list(cluster.nodes), list(cluster.atypical_nodes | cluster.boundary_nodes))
+                (list(cluster.nodes), list(
+                    cluster.atypical_nodes | cluster.boundary_nodes))
             )
 
         self._clusters4peeling = neutral_cluster_nodes
