@@ -333,7 +333,7 @@ class UnionFindDecoder(ClusteringDecoder):
 
         return output_string
 
-    def process(self, string: str, _return_err_str=False):
+    def process(self, string: str, _return_err_str=False, growth=0.5):
         """
         Process an output string and return corrected final outcomes.
 
@@ -352,7 +352,7 @@ class UnionFindDecoder(ClusteringDecoder):
                 string, all_logicals=True)
 
             # call cluster to do the clustering, but actually use the peeling form
-            self.cluster(highlighted_nodes)
+            self.cluster(highlighted_nodes, growth)
             clusters = self._clusters4peeling
 
             all_flipped_qubits = {}
@@ -391,10 +391,10 @@ class UnionFindDecoder(ClusteringDecoder):
         else:
             # turn string into nodes and cluster
             nodes = self.code.string2nodes(string, all_logicals=True)
-            clusters = self.cluster(nodes)
+            clusters = self.cluster(nodes, growth)
             return self.get_corrections(string, clusters)
 
-    def cluster(self, atypical_nodes: List):
+    def cluster(self, atypical_nodes: List, growth=0.5):
         """
         Create clusters using the union-find algorithm.
 
@@ -423,7 +423,7 @@ class UnionFindDecoder(ClusteringDecoder):
             self._create_new_cluster(node_index)
 
         while self.odd_cluster_roots:
-            self._grow_and_merge_clusters()
+            self._grow_and_merge_clusters(growth)
 
         # compile info into standard clusters dict
         clusters = {}
@@ -484,11 +484,11 @@ class UnionFindDecoder(ClusteringDecoder):
             size=1,
         )
 
-    def _grow_and_merge_clusters(self) -> Set[int]:
-        fusion_edge_list = self._grow_clusters()
+    def _grow_and_merge_clusters(self, growth) -> Set[int]:
+        fusion_edge_list = self._grow_clusters(growth)
         return self._merge_clusters(fusion_edge_list)
 
-    def _grow_clusters(self) -> List[FusionEntry]:
+    def _grow_clusters(self, growth) -> List[FusionEntry]:
         """
         Grow every "odd" cluster by half an edge.
 
@@ -500,7 +500,7 @@ class UnionFindDecoder(ClusteringDecoder):
         for root in self.odd_cluster_roots:
             odd_cluster = self.clusters[root]
             for boundary_edge in odd_cluster.boundary:
-                boundary_edge.data.properties["growth"] += 0.01
+                boundary_edge.data.properties["growth"] += growth
                 if (
                     boundary_edge.data.properties["growth"] >= boundary_edge.data.weight
                     and not boundary_edge.data.properties["fully_grown"]
