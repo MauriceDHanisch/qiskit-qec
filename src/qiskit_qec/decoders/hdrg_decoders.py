@@ -372,9 +372,10 @@ class UnionFindDecoder(ClusteringDecoder):
                 # net_z_logicals[z_logical] = num % 2
 
             # apply this to the raw readout
-            corrected_z_logicals = []
+            corrected_z_logicals = []          
             raw_logicals = self.code.string2raw_logicals(
                 self.reorder_string(string))
+            #raw_logicals = self.code.string2raw_logicals(string)
             for j, z_logical in enumerate(self.measured_logicals):
                 # for how many physical reprs the measured_logicals have (i.e. 1 for rep Code: (0,))
                 # the raw logical is the raw_logicals[j] so the raw logical outcome of the jth logical.
